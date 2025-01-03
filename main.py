@@ -117,4 +117,27 @@ class VulnerabilityScanner:
                         'present': False,  # هدر وجود ندارد
                         'recommendation': f"Add {header} header for enhanced security"  # توصیه برای اضافه کردن هدر
                     }
-            return headers_analysis  # بازگرداندن نتایج تحلیل
+            return headers_analysis  # # بازگرداندن نتایج تحلیل
+
+        def analyze_form_security(self, form: BeautifulSoup) -> Dict:
+            """تجزیه و تحلیل ویژگی های امنیتی فرم"""
+            csrf_token = False  # وجود توکن CSRF
+            autocomplete = form.get('autocomplete', 'on')  # مقدار ویژگی autocomplete
+            method = form.get('method', 'get').lower()  # متد فرم
+            action = form.get('action', '')  # آدرس action فرم
+
+            # بررسی وجود توکن CSRF
+            for input_tag in form.find_all('input'):  # بررسی تمام فیلدهای input
+                if any(token in input_tag.get('name', '').lower() for token in
+                       ['csrf', 'token', '_token']):  # بررسی نام فیلد برای یافتن توکن CSRF
+                    csrf_token = True  # توکن CSRF پیدا شد
+                    break
+
+            return {  # بازگرداندن نتایج تحلیل
+                'has_csrf_token': csrf_token,  # آیا توکن CSRF دارد؟
+                'method': method,  # متد فرم
+                'action': action,  # آدرس action فرم
+                'autocomplete': autocomplete,  # مقدار autocomplete
+                'risk_level': 'High' if not csrf_token and method == 'post' else 'Medium' if method == 'get' else 'Low'
+                # سطح ریسک
+            }
