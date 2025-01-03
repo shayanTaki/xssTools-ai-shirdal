@@ -86,3 +86,16 @@ class VulnerabilityScanner:
             'Content-Security-Policy',
             'Referrer-Policy'
         ]
+
+        def check_dns_vulnerability(self) -> Dict:
+            """بررسی آسیب پذیری های مربوط به DNS"""
+            try:
+                hostname = urllib.parse.urlparse(self.base_url).hostname  # دریافت hostname از URL
+                ip_addresses = socket.gethostbyname_ex(hostname)  # دریافت آدرس های IP مربوط به hostname
+                return {
+                    'hostname': hostname,  # نام میزبان
+                    'ip_addresses': ip_addresses[2],  # آدرس های IP
+                    'aliases': ip_addresses[1]  # نام های مستعار
+                }
+            except socket.gaierror as e:  # مدیریت خطا در صورت عدم دسترسی به DNS
+                return {'error': str(e)}
