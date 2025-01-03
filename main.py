@@ -169,3 +169,34 @@ class VulnerabilityScanner:
                     })
 
             return injection_points  # بازگرداندن لیست نقاط تزریق
+
+
+
+
+        def test_xss_payload(self, url: str, param: str, payload: str) -> Dict:
+            """تست یک پیلود XSS در برابر یک پارامتر"""
+            try:
+                # ایجاد URL تست
+                parsed = urllib.parse.urlparse(url)  # تجزیه URL
+                params = urllib.parse.parse_qs(parsed.query)  # استخراج پارامترها
+                params[param] = [payload]  # تنظیم مقدار پارامتر با پیلود
+                new_query = urllib.parse.urlencode(params, doseq=True)  # کدگذاری پارامترها
+                test_url = urllib.parse.urlunparse(parsed._replace(query=new_query))  # ایجاد URL جدید
+
+                # ارسال درخواست
+                response = self.session.get(test_url, verify=False, timeout=5)  # ارسال درخواست GET
+
+                return {  # بازگرداندن نتایج تست
+                    'url': test_url,  # URL تست
+                    'payload': payload,  # پیلود استفاده شده
+                    'reflected': payload in response.text,  # آیا پیلود در پاسخ منعکس شده است؟
+                    'encoded_reflected': html.escape(payload) in response.text,
+                    # آیا پیلود کدگذاری شده در پاسخ منعکس شده است؟
+                    'status_code': response.status_code  # کد وضعیت HTTP
+                }
+            except requests.RequestException as e:  # مدیریت خطا در صورت بروز مشکل در درخواست
+                return {
+                    'url': test_url,  # URL تست
+                    'payload': payload,  # پیلود استفاده شده
+                    'error': str(e)  # پیام خطا
+                }
