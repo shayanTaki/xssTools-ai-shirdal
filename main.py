@@ -141,3 +141,31 @@ class VulnerabilityScanner:
                 'risk_level': 'High' if not csrf_token and method == 'post' else 'Medium' if method == 'get' else 'Low'
                 # سطح ریسک
             }
+
+        def find_injection_points(self, html_content: str) -> List[Dict]:
+            """یافتن نقاط تزریق احتمالی در HTML"""
+            injection_points = []  # لیستی برای ذخیره نقاط تزریق
+            soup = BeautifulSoup(html_content, 'html.parser')  # ایجاد parser HTML
+
+            # بررسی فیلدهای ورودی
+            for input_tag in soup.find_all(['input', 'textarea']):  # یافتن تمام فیلدهای input و textarea
+                input_type = input_tag.get('type', 'text')  # نوع فیلد ورودی
+                if input_type not in ['hidden', 'submit', 'button']:  # بررسی نوع فیلد
+                    injection_points.append({
+                        'type': 'input',  # نوع نقطه تزریق
+                        'element': str(input_tag),  # المان HTML
+                        'risk': 'High' if input_type in ['text', 'search', 'url'] else 'Medium'  # سطح ریسک
+                    })
+
+            # بررسی پارامترهای URL
+            parsed_url = urllib.parse.urlparse(self.base_url)  # تجزیه URL
+            if parsed_url.query:  # بررسی وجود پارامتر در URL
+                params = urllib.parse.parse_qs(parsed_url.query)  # استخراج پارامترها
+                for param in params:  # بررسی هر پارامتر
+                    injection_points.append({
+                        'type': 'url_parameter',  # نوع نقطه تزریق
+                        'parameter': param,  # نام پارامتر
+                        'risk': 'High'  # سطح ریسک
+                    })
+
+            return injection_points  # بازگرداندن لیست نقاط تزریق
