@@ -227,80 +227,78 @@ class VulnerabilityScanner:
 
 
 
+        def scan_target(self) -> Dict[str, Any]:
+            """تابع اصلی اسکن"""
+            results = {  # دیکشنری برای ذخیره نتایج اسکن
+                'url': self.base_url,  # URL هدف
+                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),  # زمان اسکن
+                'vulnerabilities': defaultdict(list),  # آسیب پذیری های پیدا شده
+                'security_analysis': {}  # تحلیل های امنیتی
+            }
 
+            try:
+                print(f"{Fore.YELLOW}[*] Starting comprehensive scan of {self.base_url}{Style.RESET_ALL}")
 
+                # درخواست اولیه
+                response = self.session.get(self.base_url, verify=False)  # ارسال درخواست GET به URL هدف
+                html_content = response.text  # دریافت محتوای HTML
 
-    def scan_target(self) -> Dict[str, Any]:
-        """تابع اصلی اسکن"""
-        results = { # دیکشنری برای ذخیره نتایج اسکن
-            'url': self.base_url, # URL هدف
-            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),  # زمان اسکن
-            'vulnerabilities': defaultdict(list),  # آسیب پذیری های پیدا شده
-            'security_analysis': {} # تحلیل های امنیتی
-        }
+                # تحلیل هدرهای امنیتی
+                print(f"{Fore.CYAN}[*] Analyzing security headers...{Style.RESET_ALL}")
+                results['security_headers'] = self.check_security_headers(response)  # تحلیل هدرهای امنیتی
 
-        try:
-            print(f"{Fore.YELLOW}[*] Starting comprehensive scan of {self.base_url}{Style.RESET_ALL}")
+                # بررسی آسیب پذیری DNS
+                print(f"{Fore.CYAN}[*] Checking DNS configuration...{Style.RESET_ALL}")
+                results['dns_info'] = self.check_dns_vulnerability()  # بررسی پیکربندی DNS
 
-            # درخواست اولیه
-            response = self.session.get(self.base_url, verify=False) # ارسال درخواست GET به URL هدف
-            html_content = response.text # دریافت محتوای HTML
+                # یافتن نقاط تزریق
+                print(f"{Fore.CYAN}[*] Identifying injection points...{Style.RESET_ALL}")
+                injection_points = self.find_injection_points(html_content)  # یافتن نقاط تزریق
+                results['injection_points'] = injection_points  # ذخیره نقاط تزریق
 
-            # تحلیل هدرهای امنیتی
-            print(f"{Fore.CYAN}[*] Analyzing security headers...{Style.RESET_ALL}")
-            results['security_headers'] = self.check_security_headers(response) # تحلیل هدرهای امنیتی
+                # تحلیل فرم ها
+                print(f"{Fore.CYAN}[*] Analyzing form security...{Style.RESET_ALL}")
+                soup = BeautifulSoup(html_content, 'html.parser')  # ایجاد parser HTML
+                forms = soup.find_all('form')  # یافتن تمام فرم ها
+                results['forms_analysis'] = [self.analyze_form_security(form) for form in forms]  # تحلیل امنیت فرم ها
 
-            # بررسی آسیب پذیری DNS
-            print(f"{Fore.CYAN}[*] Checking DNS configuration...{Style.RESET_ALL}")
-            results['dns_info'] = self.check_dns_vulnerability() # بررسی پیکربندی DNS
+                # تست آسیب پذیری های XSS
+                print(f"{Fore.CYAN}[*] Testing XSS vulnerabilities...{Style.RESET_ALL}")
+                xss_payloads = self.generate_xss_payloads()  # تولید پیلودهای XSS
 
-            # یافتن نقاط تزریق
-            print(f"{Fore.CYAN}[*] Identifying injection points...{Style.RESET_ALL}")
-            injection_points = self.find_injection_points(html_content) # یافتن نقاط تزریق
-            results['injection_points'] = injection_points  # ذخیره نقاط تزریق
+                for point in injection_points:  # بررسی هر نقطه تزریق
+                    if point['type'] == 'url_parameter':  # اگر نقطه تزریق از نوع پارامتر URL باشد
+                        print(f"{Fore.YELLOW}[*] Testing parameter: {point['parameter']}{Style.RESET_ALL}")
+                        for payload in xss_payloads:  # تست هر پیلود XSS
+                            result = self.test_xss_payload(self.base_url, point['parameter'], payload)  # تست پیلود
+                            if result.get('reflected') or result.get(
+                                    'encoded_reflected'):  # اگر پیلود در پاسخ منعکس شده باشد
+                                results['vulnerabilities']['xss'].append(result)  # ذخیره نتیجه
 
-            # تحلیل فرم ها
-            print(f"{Fore.CYAN}[*] Analyzing form security...{Style.RESET_ALL}")
-            soup = BeautifulSoup(html_content, 'html.parser') # ایجاد parser HTML
-            forms = soup.find_all('form') # یافتن تمام فرم ها
-            results['forms_analysis'] = [self.analyze_form_security(form) for form in forms] # تحلیل امنیت فرم ها
+                # تحلیل مبتنی بر الگو
+                for category, patterns in self.xss_patterns.items():  # بررسی هر دسته از الگوهای XSS
+                    print(f"{Fore.CYAN}[*] Checking {category} patterns...{Style.RESET_ALL}")
+                    for pattern in patterns:  # بررسی هر الگو
+                        matches = re.finditer(pattern, html_content, re.IGNORECASE)  # جستجوی الگو در محتوای HTML
+                        for match in matches:  # بررسی هر تطابق
+                            results['vulnerabilities'][category].append({  # ذخیره نتیجه تطابق
+                                'pattern': pattern,  # الگوی تطابق یافته
+                                'matched_content': match.group(0),  # محتوای تطابق یافته
+                                'position': match.span()  # موقعیت تطابق در رشته
+                            })
 
-            # تست آسیب پذیری های XSS
-            print(f"{Fore.CYAN}[*] Testing XSS vulnerabilities...{Style.RESET_ALL}")
-            xss_payloads = self.generate_xss_payloads() # تولید پیلودهای XSS
+                # اگر کلید API Mistral موجود باشد، تحلیل با هوش مصنوعی انجام می شود
+                if self.mistral_api_key:  # بررسی وجود کلید API
+                    print(f"{Fore.CYAN}[*] Performing AI-powered analysis...{Style.RESET_ALL}")
+                    for vuln_type, vulns in results['vulnerabilities'].items():  # بررسی هر نوع آسیب پذیری
+                        if vulns:  # فقط در صورت وجود آسیب پذیری، تحلیل انجام می شود
+                            analysis = self.analyze_with_mistral(json.dumps(vulns))  # تحلیل با Mistral AI
+                            if analysis:  # اگر تحلیل با موفقیت انجام شد
+                                results['ai_analysis'][vuln_type] = analysis  # ذخیره نتیجه تحلیل
 
-            for point in injection_points:  # بررسی هر نقطه تزریق
-                if point['type'] == 'url_parameter': # اگر نقطه تزریق از نوع پارامتر URL باشد
-                    print(f"{Fore.YELLOW}[*] Testing parameter: {point['parameter']}{Style.RESET_ALL}")
-                    for payload in xss_payloads: # تست هر پیلود XSS
-                        result = self.test_xss_payload(self.base_url, point['parameter'], payload) # تست پیلود
-                        if result.get('reflected') or result.get('encoded_reflected'): # اگر پیلود در پاسخ منعکس شده باشد
-                            results['vulnerabilities']['xss'].append(result) # ذخیره نتیجه
+                return results  # بازگرداندن نتایج اسکن
 
-            # تحلیل مبتنی بر الگو
-            for category, patterns in self.xss_patterns.items():  # بررسی هر دسته از الگوهای XSS
-                print(f"{Fore.CYAN}[*] Checking {category} patterns...{Style.RESET_ALL}")
-                for pattern in patterns:  # بررسی هر الگو
-                    matches = re.finditer(pattern, html_content, re.IGNORECASE)  # جستجوی الگو در محتوای HTML
-                    for match in matches:  # بررسی هر تطابق
-                        results['vulnerabilities'][category].append({ # ذخیره نتیجه تطابق
-                            'pattern': pattern, # الگوی تطابق یافته
-                            'matched_content': match.group(0), # محتوای تطابق یافته
-                            'position': match.span() # موقعیت تطابق در رشته
-                        })
-
-            # اگر کلید API Mistral موجود باشد، تحلیل با هوش مصنوعی انجام می شود
-            if self.mistral_api_key: # بررسی وجود کلید API
-                print(f"{Fore.CYAN}[*] Performing AI-powered analysis...{Style.RESET_ALL}")
-                for vuln_type, vulns in results['vulnerabilities'].items():  # بررسی هر نوع آسیب پذیری
-                    if vulns:  # فقط در صورت وجود آسیب پذیری، تحلیل انجام می شود
-                        analysis = self.analyze_with_mistral(json.dumps(vulns))  # تحلیل با Mistral AI
-                        if analysis:  # اگر تحلیل با موفقیت انجام شد
-                            results['ai_analysis'][vuln_type] = analysis # ذخیره نتیجه تحلیل
-
-            return results # بازگرداندن نتایج اسکن
-
-        except Exception as e: # مدیریت خطا در صورت بروز مشکل در اسکن
-            print(f"{Fore.RED}[!] Error during scan: {e}{Style.RESET_ALL}")
-            results['error'] = str(e) # ذخیره پیام خطا
-            return results # بازگرداندن نتایج
+            except Exception as e:  # مدیریت خطا در صورت بروز مشکل در اسکن
+                print(f"{Fore.RED}[!] Error during scan: {e}{Style.RESET_ALL}")
+                results['error'] = str(e)  # ذخیره پیام خطا
+                return results  # بازگرداندن نتایج
