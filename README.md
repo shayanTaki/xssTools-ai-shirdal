@@ -14,12 +14,12 @@
 ### مراحل نصب
 1. ابتدا مخزن پروژه را کلون کنید:
    ```bash
-   git clone https://github.com/shayanTaki/vulnerability-scanner.git
+   git clone https://github.com/shayanTaki/xssTools-ai-shirdal
    ```
 
 2. وارد پوشه پروژه شوید:
    ```bash
-   cd vulnerability-scanner
+   cd xssTools-ai-shirdal
    ```
 
 3. کتابخانه‌های مورد نیاز را با استفاده از فایل `requirements.txt` نصب کنید:
