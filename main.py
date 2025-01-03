@@ -411,3 +411,14 @@ def main():
     print(f"\n{Fore.GREEN}[+] Full report saved to: {filename}{Style.RESET_ALL}") # نمایش مسیر فایل گزارش
     print(
         f"{Fore.YELLOW}[*] Note: Some findings may be false positives. Manual verification is recommended.{Style.RESET_ALL}") # نمایش پیام توجه
+
+
+if __name__ == "__main__":
+    try:
+        main()  # اجرای تابع main
+    except KeyboardInterrupt:  # مدیریت وقفه توسط کاربر
+        print(f"\n{Fore.YELLOW}[!] Scan interrupted by user{Style.RESET_ALL}")
+        sys.exit(1)
+    except Exception as e:  # مدیریت خطاهای دیگر
+        print(f"\n{Fore.RED}[!] An error occurred: {e}{Style.RESET_ALL}")
+        sys.exit(1)
