@@ -302,3 +302,112 @@ class VulnerabilityScanner:
                 print(f"{Fore.RED}[!] Error during scan: {e}{Style.RESET_ALL}")
                 results['error'] = str(e)  # ذخیره پیام خطا
                 return results  # بازگرداندن نتایج
+
+
+
+
+def main():
+    colorama.init()  # مقداردهی اولیه colorama
+    scanner = VulnerabilityScanner()  # ایجاد یک شی از کلاس VulnerabilityScanner
+
+    # نمایش پیام خوش آمدگویی
+    print(f"""{Fore.CYAN}
+    ╔═══════════════════════════════════════╗
+    ║     Enhanced Vulnerability Scanner    ║
+    ║      With Mistral AI Integration      ║
+    ║               Made by:                ║
+    ║      shirdalcode.ir | shayan taki     ║
+    ╚═══════════════════════════════════════╝
+    {Style.RESET_ALL}""")
+
+    # دریافت URL از کاربر
+    while True:
+        url = input(f"{Fore.GREEN}[+] Enter target URL: {Style.RESET_ALL}").strip()  # دریافت URL از کاربر
+        if url.startswith(('http://', 'https://')): # بررسی معتبر بودن URL
+            scanner.base_url = url # تنظیم URL هدف
+            break
+        print(f"{Fore.RED}[!] Please enter a valid URL starting with http:// or https://{Style.RESET_ALL}") # نمایش پیام خطا
+
+    # دریافت کلید API Mistral از کاربر (اختیاری)
+    api_key = input(
+        f"{Fore.GREEN}[+] Enter Mistral API key (press Enter to skip AI analysis): {Style.RESET_ALL}").strip() # دریافت کلید API
+    if api_key: # بررسی وجود کلید API
+        scanner.mistral_api_key = api_key # تنظیم کلید API
+
+    # شروع اسکن
+    print(f"\n{Fore.YELLOW}[*] Starting comprehensive vulnerability scan...{Style.RESET_ALL}")
+    results = scanner.scan_target() # شروع اسکن
+
+    # ذخیره نتایج
+    timestamp = time.strftime('%Y%m%d-%H%M%S') # ایجاد timestamp
+    filename = f'vulnerability_scan_{timestamp}.json' # نام فایل برای ذخیره نتایج
+    with open(filename, 'w') as f: # ذخیره نتایج در فایل
+        json.dump(results, f, indent=2)  # ذخیره نتایج در قالب JSON
+
+    # نمایش خلاصه نتایج
+    print(f"\n{Fore.GREEN}[+] Scan complete! Summary:{Style.RESET_ALL}") # نمایش پیام پایان اسکن
+    print(f"\nVulnerabilities found:") # نمایش آسیب پذیری های پیدا شده
+    for vuln_type, vulns in results['vulnerabilities'].items(): # بررسی هر نوع آسیب پذیری
+        print(f"{Fore.YELLOW}- {vuln_type}: {len(vulns)} potential issues{Style.RESET_ALL}") # نمایش تعداد آسیب پذیری ها
+
+        if len(vulns) > 0: # نمایش جزئیات آسیب پذیری ها (حداکثر 3 مورد)
+            print(f"\n{Fore.CYAN}Details for {vuln_type}:{Style.RESET_ALL}")
+            for i, vuln in enumerate(vulns[:3], 1):
+                if isinstance(vuln, dict):
+                    if 'pattern' in vuln:
+                        print(f"  {i}. Pattern matched: {vuln['pattern']}")
+                        print(f"     Content: {vuln['matched_content'][:100]}...")
+                    elif 'payload' in vuln:
+                        print(f"  {i}. Payload: {vuln['payload']}")
+                        print(f"     URL: {vuln['url']}")
+                        print(f"     Reflected: {'Yes' if vuln.get('reflected') else 'No'}")
+            if len(vulns) > 3:
+                print(f"\n     ... and {len(vulns) - 3} more issues") # نمایش پیام در صورت وجود موارد بیشتر
+
+    # نمایش خلاصه تحلیل هدرهای امنیتی
+    if 'security_headers' in results: # بررسی وجود تحلیل هدرهای امنیتی
+        print(f"\n{Fore.CYAN}Security Headers Analysis:{Style.RESET_ALL}")
+        headers = results['security_headers'] # دریافت نتایج تحلیل هدرها
+        missing_headers = [header for header, info in headers.items() if not info['present']] # یافتن هدرهای مفقود
+        if missing_headers:  # نمایش هدرهای مفقود
+            print(f"{Fore.RED}Missing security headers:{Style.RESET_ALL}")
+            for header in missing_headers:  # نمایش هر هدر مفقود
+                print(f"- {header}")
+        else:  # تمام هدرهای امنیتی موجود هستند
+            print(f"{Fore.GREEN}All essential security headers are present{Style.RESET_ALL}")
+
+    # نمایش خلاصه تحلیل امنیت فرم ها
+    if 'forms_analysis' in results: # بررسی وجود تحلیل فرم ها
+        print(f"\n{Fore.CYAN}Form Security Analysis:{Style.RESET_ALL}")
+        high_risk_forms = [form for form in results['forms_analysis'] if form['risk_level'] == 'High']  # یافتن فرم های با ریسک بالا
+        if high_risk_forms:  # نمایش فرم های با ریسک بالا
+            print(f"{Fore.RED}Found {len(high_risk_forms)} high-risk forms:{Style.RESET_ALL}")
+            for form in high_risk_forms: # نمایش هر فرم با ریسک بالا
+                print(f"- Form action: {form['action']}") # نمایش action فرم
+                print(f"  Missing CSRF token: {'Yes' if not form['has_csrf_token'] else 'No'}") # نمایش وضعیت توکن CSRF
+
+    # نمایش خلاصه نقاط تزریق
+    if 'injection_points' in results: # بررسی وجود نقاط تزریق
+        print(f"\n{Fore.CYAN}Injection Points Analysis:{Style.RESET_ALL}")
+        high_risk_points = [point for point in results['injection_points'] if point['risk'] == 'High'] # یافتن نقاط تزریق با ریسک بالا
+        if high_risk_points: # نمایش نقاط تزریق با ریسک بالا (حداکثر 3 مورد)
+            print(f"{Fore.RED}Found {len(high_risk_points)} high-risk injection points:{Style.RESET_ALL}")
+            for point in high_risk_points[:3]:
+                if point['type'] == 'input': # نمایش اطلاعات نقطه تزریق
+                    print(f"- Input element: {point['element'][:100]}...") # نمایش المان input
+                else:
+                    print(f"- URL parameter: {point['parameter']}") # نمایش پارامتر URL
+
+
+    # نمایش خلاصه تحلیل هوش مصنوعی (در صورت وجود)
+    if 'ai_analysis' in results and results['ai_analysis']:  # بررسی وجود تحلیل هوش مصنوعی
+        print(f"\n{Fore.CYAN}AI Analysis Summary:{Style.RESET_ALL}")
+        for vuln_type, analysis in results['ai_analysis'].items():  # نمایش نتایج تحلیل برای هر نوع آسیب پذیری
+            if 'choices' in analysis and analysis['choices']:  # بررسی وجود نتایج تحلیل
+                print(f"\n{Fore.YELLOW}Analysis for {vuln_type}:{Style.RESET_ALL}")
+                print(analysis['choices'][0]['message']['content'][:500] + "...") # نمایش بخشی از نتایج تحلیل
+
+
+    print(f"\n{Fore.GREEN}[+] Full report saved to: {filename}{Style.RESET_ALL}") # نمایش مسیر فایل گزارش
+    print(
+        f"{Fore.YELLOW}[*] Note: Some findings may be false positives. Manual verification is recommended.{Style.RESET_ALL}") # نمایش پیام توجه
