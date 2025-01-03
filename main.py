@@ -99,3 +99,22 @@ class VulnerabilityScanner:
                 }
             except socket.gaierror as e:  # مدیریت خطا در صورت عدم دسترسی به DNS
                 return {'error': str(e)}
+
+
+
+
+        def check_security_headers(self, response: requests.Response) -> Dict:
+            """تجزیه و تحلیل هدرهای امنیتی"""
+            headers_analysis = {}  # دیکشنری برای ذخیره نتایج تحلیل هدرها
+            for header in self.security_headers:  # بررسی هر هدر امنیتی
+                if header in response.headers:  # بررسی وجود هدر
+                    headers_analysis[header] = {
+                        'present': True,  # هدر وجود دارد
+                        'value': response.headers[header]  # مقدار هدر
+                    }
+                else:  # هدر وجود ندارد
+                    headers_analysis[header] = {
+                        'present': False,  # هدر وجود ندارد
+                        'recommendation': f"Add {header} header for enhanced security"  # توصیه برای اضافه کردن هدر
+                    }
+            return headers_analysis  # بازگرداندن نتایج تحلیل
