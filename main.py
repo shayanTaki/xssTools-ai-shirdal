@@ -58,8 +58,8 @@ class VulnerabilityScanner:
                 r'eval\(.*?\)',
                 r'setTimeout\s*\(\s*[\'"].*?[\'"]',
                 r'setInterval\s*\(\s*[\'"].*?[\'"]',
-                r'\$\(.*?\)\[\d+\].innerHTML\s*=',  # دستکاری innerHTML با jQuery
-                r'\$\(.*?\)\[\d+\].html\(',  # دستکاری html با jQuery
+                r'\$\(.*?\)\[\d+\]\.innerHTML\s*=',  # دستکاری innerHTML با jQuery
+                r'\$\(.*?\)\[\d+\]\.html\(',  # دستکاری html با jQuery
             ],
             'protocol_handlers': [
                 r'vbscript:',
@@ -76,7 +76,7 @@ class VulnerabilityScanner:
                 r'&#[0-9]+;',  # Decimal encoded
             ],
             'bypass_techniques': [
-                r'<s[[:space:]]*/\s*script[^>]*>',  # شکستن تگ <script> با فضای خالی
+                r'<s\s*/\s*script[^>]*>',  # شکستن تگ <script> با فضای خالی (اصلاح شده)
                 r'<img\s+src\s*=\s*"?\'?x\'?"?\s+onerror\s*=\s*"?[^\'"]*?"?',  # onerror بدون مقدار مشخص
                 r'<body\s+onload\s*=\s*"?[^\'"]*?"?',  # تگ body با onload
                 r'<input\s+type\s*=\s*"image"\s+onerror\s*=\s*"?[^\'"]*?"?',  # تگ input type image با onerror
