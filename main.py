@@ -33,35 +33,76 @@ class VulnerabilityScanner:
 
         # الگوهای XSS توسعه یافته
         self.xss_patterns = {
-            'basic_xss': [ # XSS پایه
+            'basic_xss': [
                 r'<script\b[^>]*>.*?</script>',
-                r'javascript:.*?[(].*?[)]',
+                r'javascript:[^"]*',
                 r'on\w+\s*=\s*(["\']).*?\1',
                 r'data:text/html.*?base64',
-                r'<img[^>]+src\s*=\s*(["\'])[^>]*?onerror\s*=',
+                r'<iframe.*?srcdoc\s*=\s*(["\']).*?\1',  # srcdoc در iframe
+                r'<object.*?data\s*=\s*(["\']).*?\1.*?</object>',  # تگ object با data
+                r'<embed.*?src\s*=\s*(["\']).*?\1',  # تگ embed با src
             ],
-            'attribute_injection': [ # تزریق ویژگی
-                r'["\'].*?["\']',
-                r'\[[^]]*\]',
-                r'\(\s*[^)]*\s*\)',
+            'attribute_injection': [
+                r'<\w+\s+[^>]*?=["\'][^"\']*?<script',  # تلاش برای شکستن ویژگی و تزریق اسکریپت
+                r'<\w+\s+[^>]*?=["\'][^"\']*?on\w+\s*=',  # تلاش برای تزریق event handler در ویژگی
+                r'style\s*=\s*(["\']).*?expression\(.*?\1',  # استفاده از expression در style (مختص IE)
+                r'background-image\s*:\s*url\s*\(\s*[\'"]?javascript:',  # تزریق جاوااسکریپت در background-image
+                r'background\s*:\s*url\s*\(\s*[\'"]?javascript:',  # تزریق جاوااسکریپت در background
             ],
-            'dom_manipulation': [  # دستکاری DOM
-                r'document\.(location|cookie|referrer)',
-                r'window\.(name|location)',
-                r'localStorage|sessionStorage',
-                r'eval\s*\(',
-                r'setTimeout|setInterval',
+            'dom_manipulation': [
+                r'document\.write\(.*?\)',
+                r'document\.location\s*=\s*[\'"].*?[\'"]',
+                r'window\.location\.href\s*=\s*[\'"].*?[\'"]',
+                r'localStorage\.setItem\(.*?\)',
+                r'sessionStorage\.setItem\(.*?\)',
+                r'eval\(.*?\)',
+                r'setTimeout\s*\(\s*[\'"].*?[\'"]',
+                r'setInterval\s*\(\s*[\'"].*?[\'"]',
+                r'\$\(.*?\)\[\d+\].innerHTML\s*=',  # دستکاری innerHTML با jQuery
+                r'\$\(.*?\)\[\d+\].html\(',  # دستکاری html با jQuery
             ],
-            'protocol_handlers': [ # هندلرهای پروتکل
-                r'vbscript:.*',
-                r'data:.*',
-                r'view-source:.*',
+            'protocol_handlers': [
+                r'vbscript:',
+                r'data:.*?/javascript',  # شناسایی data URI برای جاوااسکریپت
+                r'mocha:',
+                r'livescript:',
             ],
-            'encoded_payloads': [ # پیلودهای کدگذاری شده
-                r'%3C.*%3E',  # URL encoded
-                r'&#x.*?;',  # Hex encoded
-                r'&#\d+;',  # Decimal encoded
-                r'\\x[0-9a-fA-F]{2}',  # Hex escaped
+            'encoded_payloads': [
+                r'%3Cscript.*?%3E.*?%3C/script%3E',  # URL encoded <script>
+                r'&#[xX]?[\da-fA-F]+;',  # HTML entity encoded
+                r'\\u[\da-fA-F]{4}',  # Unicode encoded
+                r'&#\d+;',  # Decimal HTML entity
+                r'\\x[0-9a-fA-F]{2}',  # Hex encoded
+                r'&#[0-9]+;',  # Decimal encoded
+            ],
+            'bypass_techniques': [
+                r'<s[[:space:]]*/\s*script[^>]*>',  # شکستن تگ <script> با فضای خالی
+                r'<img\s+src\s*=\s*"?\'?x\'?"?\s+onerror\s*=\s*"?[^\'"]*?"?',  # onerror بدون مقدار مشخص
+                r'<body\s+onload\s*=\s*"?[^\'"]*?"?',  # تگ body با onload
+                r'<input\s+type\s*=\s*"image"\s+onerror\s*=\s*"?[^\'"]*?"?',  # تگ input type image با onerror
+                r'<!--.*?<script.*?-->',  # اسکریپت مخفی شده در کامنت HTML
+                r'<!\[CDATA\[.*?<script.*?]]>',  # اسکریپت مخفی شده در CDATA
+                r'<!--.*?--><script',  # شکستن کامنت و شروع اسکریپت
+            ],
+            'html5_specific': [
+                r'<video.*?onloadstart\s*=',
+                r'<audio.*?onloadstart\s*=',
+                r'<details.*?ontoggle\s*=',
+                r'<svg.*?onload\s*=',
+                r'<math.*?onclick\s*=',
+            ],
+            'server_side_includes': [
+                r'<!--#include\s+virtual=".*?-->',  # SSI include virtual
+                r'<!--#include\s+file=".*?-->',  # SSI include file
+                r'<%.*?%>',  # ASP style server-side includes
+                r'<\?php.*?\?>',  # PHP tags
+            ],
+            'open_redirect': [
+                r'window\.location\.replace\s*\(\s*[\'"]?([^"\']*)[\'"]?\s*\)',
+                r'window\.open\s*\(\s*[\'"]?([^"\']*)[\'"]?\s*\)',
+                r'response\.sendRedirect\s*\(\s*[\'"]?([^"\']*)[\'"]?\s*\)',  # Java redirect
+                r'header\s*\(\s*[\'"]?Location:\s*([^"\']*)[\'"]?\s*\)',  # PHP header redirect
+                r'<meta\s+http-equiv="refresh"\s+content="[^;]*;\s*url=([^"]*)"',  # Meta refresh
             ]
         }
 
