@@ -128,126 +128,126 @@ class VulnerabilityScanner:
             'Referrer-Policy'
         ]
 
-        def check_dns_vulnerability(self) -> Dict:
-            """بررسی آسیب پذیری های مربوط به DNS"""
-            try:
-                hostname = urllib.parse.urlparse(self.base_url).hostname  # دریافت hostname از URL
-                ip_addresses = socket.gethostbyname_ex(hostname)  # دریافت آدرس های IP مربوط به hostname
-                return {
-                    'hostname': hostname,  # نام میزبان
-                    'ip_addresses': ip_addresses[2],  # آدرس های IP
-                    'aliases': ip_addresses[1]  # نام های مستعار
+    def check_dns_vulnerability(self) -> Dict:
+        """بررسی آسیب پذیری های مربوط به DNS"""
+        try:
+            hostname = urllib.parse.urlparse(self.base_url).hostname  # دریافت hostname از URL
+            ip_addresses = socket.gethostbyname_ex(hostname)  # دریافت آدرس های IP مربوط به hostname
+            return {
+                'hostname': hostname,  # نام میزبان
+                'ip_addresses': ip_addresses[2],  # آدرس های IP
+                'aliases': ip_addresses[1]  # نام های مستعار
+            }
+        except socket.gaierror as e:  # مدیریت خطا در صورت عدم دسترسی به DNS
+            return {'error': str(e)}
+
+
+
+
+    def check_security_headers(self, response: requests.Response) -> Dict:
+        """تجزیه و تحلیل هدرهای امنیتی"""
+        headers_analysis = {}  # دیکشنری برای ذخیره نتایج تحلیل هدرها
+        for header in self.security_headers:  # بررسی هر هدر امنیتی
+            if header in response.headers:  # بررسی وجود هدر
+                headers_analysis[header] = {
+                    'present': True,  # هدر وجود دارد
+                    'value': response.headers[header]  # مقدار هدر
                 }
-            except socket.gaierror as e:  # مدیریت خطا در صورت عدم دسترسی به DNS
-                return {'error': str(e)}
+            else:  # هدر وجود ندارد
+                headers_analysis[header] = {
+                    'present': False,  # هدر وجود ندارد
+                    'recommendation': f"Add {header} header for enhanced security"  # توصیه برای اضافه کردن هدر
+                }
+        return headers_analysis  # # بازگرداندن نتایج تحلیل
+
+    def analyze_form_security(self, form: BeautifulSoup) -> Dict:
+        """تجزیه و تحلیل ویژگی های امنیتی فرم"""
+        csrf_token = False  # وجود توکن CSRF
+        autocomplete = form.get('autocomplete', 'on')  # مقدار ویژگی autocomplete
+        method = form.get('method', 'get').lower()  # متد فرم
+        action = form.get('action', '')  # آدرس action فرم
+
+        # بررسی وجود توکن CSRF
+        for input_tag in form.find_all('input'):  # بررسی تمام فیلدهای input
+            if any(token in input_tag.get('name', '').lower() for token in
+                    ['csrf', 'token', '_token']):  # بررسی نام فیلد برای یافتن توکن CSRF
+                csrf_token = True  # توکن CSRF پیدا شد
+                break
+
+        return {  # بازگرداندن نتایج تحلیل
+            'has_csrf_token': csrf_token,  # آیا توکن CSRF دارد؟
+            'method': method,  # متد فرم
+            'action': action,  # آدرس action فرم
+            'autocomplete': autocomplete,  # مقدار autocomplete
+            'risk_level': 'High' if not csrf_token and method == 'post' else 'Medium' if method == 'get' else 'Low'
+            # سطح ریسک
+        }
+
+    def find_injection_points(self, html_content: str) -> List[Dict]:
+        """یافتن نقاط تزریق احتمالی در HTML"""
+        injection_points = []  # لیستی برای ذخیره نقاط تزریق
+        soup = BeautifulSoup(html_content, 'html.parser')  # ایجاد parser HTML
+
+        # بررسی فیلدهای ورودی
+        for input_tag in soup.find_all(['input', 'textarea']):  # یافتن تمام فیلدهای input و textarea
+            input_type = input_tag.get('type', 'text')  # نوع فیلد ورودی
+            if input_type not in ['hidden', 'submit', 'button']:  # بررسی نوع فیلد
+                injection_points.append({
+                    'type': 'input',  # نوع نقطه تزریق
+                    'element': str(input_tag),  # المان HTML
+                    'risk': 'High' if input_type in ['text', 'search', 'url'] else 'Medium'  # سطح ریسک
+                })
+
+        # بررسی پارامترهای URL
+        parsed_url = urllib.parse.urlparse(self.base_url)  # تجزیه URL
+        if parsed_url.query:  # بررسی وجود پارامتر در URL
+            params = urllib.parse.parse_qs(parsed_url.query)  # استخراج پارامترها
+            for param in params:  # بررسی هر پارامتر
+                injection_points.append({
+                    'type': 'url_parameter',  # نوع نقطه تزریق
+                    'parameter': param,  # نام پارامتر
+                    'risk': 'High'  # سطح ریسک
+                })
+
+        return injection_points  # بازگرداندن لیست نقاط تزریق
 
 
 
 
-        def check_security_headers(self, response: requests.Response) -> Dict:
-            """تجزیه و تحلیل هدرهای امنیتی"""
-            headers_analysis = {}  # دیکشنری برای ذخیره نتایج تحلیل هدرها
-            for header in self.security_headers:  # بررسی هر هدر امنیتی
-                if header in response.headers:  # بررسی وجود هدر
-                    headers_analysis[header] = {
-                        'present': True,  # هدر وجود دارد
-                        'value': response.headers[header]  # مقدار هدر
-                    }
-                else:  # هدر وجود ندارد
-                    headers_analysis[header] = {
-                        'present': False,  # هدر وجود ندارد
-                        'recommendation': f"Add {header} header for enhanced security"  # توصیه برای اضافه کردن هدر
-                    }
-            return headers_analysis  # # بازگرداندن نتایج تحلیل
+    def test_xss_payload(self, url: str, param: str, payload: str) -> Dict:
+        """تست یک پیلود XSS در برابر یک پارامتر"""
+        try:
+            # ایجاد URL تست
+            parsed = urllib.parse.urlparse(url)  # تجزیه URL
+            params = urllib.parse.parse_qs(parsed.query)  # استخراج پارامترها
+            params[param] = [payload]  # تنظیم مقدار پارامتر با پیلود
+            new_query = urllib.parse.urlencode(params, doseq=True)  # کدگذاری پارامترها
+            test_url = urllib.parse.urlunparse(parsed._replace(query=new_query))  # ایجاد URL جدید
 
-        def analyze_form_security(self, form: BeautifulSoup) -> Dict:
-            """تجزیه و تحلیل ویژگی های امنیتی فرم"""
-            csrf_token = False  # وجود توکن CSRF
-            autocomplete = form.get('autocomplete', 'on')  # مقدار ویژگی autocomplete
-            method = form.get('method', 'get').lower()  # متد فرم
-            action = form.get('action', '')  # آدرس action فرم
+            # ارسال درخواست
+            response = self.session.get(test_url, verify=False, timeout=5)  # ارسال درخواست GET
 
-            # بررسی وجود توکن CSRF
-            for input_tag in form.find_all('input'):  # بررسی تمام فیلدهای input
-                if any(token in input_tag.get('name', '').lower() for token in
-                       ['csrf', 'token', '_token']):  # بررسی نام فیلد برای یافتن توکن CSRF
-                    csrf_token = True  # توکن CSRF پیدا شد
-                    break
-
-            return {  # بازگرداندن نتایج تحلیل
-                'has_csrf_token': csrf_token,  # آیا توکن CSRF دارد؟
-                'method': method,  # متد فرم
-                'action': action,  # آدرس action فرم
-                'autocomplete': autocomplete,  # مقدار autocomplete
-                'risk_level': 'High' if not csrf_token and method == 'post' else 'Medium' if method == 'get' else 'Low'
-                # سطح ریسک
+            return {  # بازگرداندن نتایج تست
+                'url': test_url,  # URL تست
+                'payload': payload,  # پیلود استفاده شده
+                'reflected': payload in response.text,  # آیا پیلود در پاسخ منعکس شده است؟
+                'encoded_reflected': html.escape(payload) in response.text,
+                # آیا پیلود کدگذاری شده در پاسخ منعکس شده است؟
+                'status_code': response.status_code  # کد وضعیت HTTP
+            }
+        except requests.RequestException as e:  # مدیریت خطا در صورت بروز مشکل در درخواست
+            return {
+                'url': test_url,  # URL تست
+                'payload': payload,  # پیلود استفاده شده
+                'error': str(e)  # پیام خطا
             }
 
-        def find_injection_points(self, html_content: str) -> List[Dict]:
-            """یافتن نقاط تزریق احتمالی در HTML"""
-            injection_points = []  # لیستی برای ذخیره نقاط تزریق
-            soup = BeautifulSoup(html_content, 'html.parser')  # ایجاد parser HTML
-
-            # بررسی فیلدهای ورودی
-            for input_tag in soup.find_all(['input', 'textarea']):  # یافتن تمام فیلدهای input و textarea
-                input_type = input_tag.get('type', 'text')  # نوع فیلد ورودی
-                if input_type not in ['hidden', 'submit', 'button']:  # بررسی نوع فیلد
-                    injection_points.append({
-                        'type': 'input',  # نوع نقطه تزریق
-                        'element': str(input_tag),  # المان HTML
-                        'risk': 'High' if input_type in ['text', 'search', 'url'] else 'Medium'  # سطح ریسک
-                    })
-
-            # بررسی پارامترهای URL
-            parsed_url = urllib.parse.urlparse(self.base_url)  # تجزیه URL
-            if parsed_url.query:  # بررسی وجود پارامتر در URL
-                params = urllib.parse.parse_qs(parsed_url.query)  # استخراج پارامترها
-                for param in params:  # بررسی هر پارامتر
-                    injection_points.append({
-                        'type': 'url_parameter',  # نوع نقطه تزریق
-                        'parameter': param,  # نام پارامتر
-                        'risk': 'High'  # سطح ریسک
-                    })
-
-            return injection_points  # بازگرداندن لیست نقاط تزریق
 
 
 
-
-        def test_xss_payload(self, url: str, param: str, payload: str) -> Dict:
-            """تست یک پیلود XSS در برابر یک پارامتر"""
-            try:
-                # ایجاد URL تست
-                parsed = urllib.parse.urlparse(url)  # تجزیه URL
-                params = urllib.parse.parse_qs(parsed.query)  # استخراج پارامترها
-                params[param] = [payload]  # تنظیم مقدار پارامتر با پیلود
-                new_query = urllib.parse.urlencode(params, doseq=True)  # کدگذاری پارامترها
-                test_url = urllib.parse.urlunparse(parsed._replace(query=new_query))  # ایجاد URL جدید
-
-                # ارسال درخواست
-                response = self.session.get(test_url, verify=False, timeout=5)  # ارسال درخواست GET
-
-                return {  # بازگرداندن نتایج تست
-                    'url': test_url,  # URL تست
-                    'payload': payload,  # پیلود استفاده شده
-                    'reflected': payload in response.text,  # آیا پیلود در پاسخ منعکس شده است؟
-                    'encoded_reflected': html.escape(payload) in response.text,
-                    # آیا پیلود کدگذاری شده در پاسخ منعکس شده است؟
-                    'status_code': response.status_code  # کد وضعیت HTTP
-                }
-            except requests.RequestException as e:  # مدیریت خطا در صورت بروز مشکل در درخواست
-                return {
-                    'url': test_url,  # URL تست
-                    'payload': payload,  # پیلود استفاده شده
-                    'error': str(e)  # پیام خطا
-                }
-
-
-
-
-        def generate_xss_payloads(self) -> List[str]:
-            """تولید پیلودهای XSS مختلف برای تست"""
-            return [  # لیستی از پیلودهای XSS
+    def generate_xss_payloads(self) -> List[str]:
+        """تولید پیلودهای XSS مختلف برای تست"""
+        return [  # لیستی از پیلودهای XSS
                 "<script>alert('XSS')</script>",
         "<SCRIPT>alert('XSS')</SCRIPT>", # حروف بزرگ
         "<scr<script>ipt>alert('XSS')</scr</script>ipt>", # تگ شکسته
@@ -295,21 +295,18 @@ class VulnerabilityScanner:
         "javascript\x3aalert('XSS')", # استفاده از Hex encoding در پروتکل
         "javascript:alert('XSS')", # استفاده از HTML entity در پروتکل
         "<<SCRIPT>alert(\"XSS\")//<</SCRIPT>", # تگ با حروف بزرگ و کاراکترهای اضافه
-            ]
+        ]
 
-
-
-
-        def scan_target(self) -> Dict[str, Any]:
-            """تابع اصلی اسکن"""
-            results = {  # دیکشنری برای ذخیره نتایج اسکن
+    def scan_target(self) -> Dict[str, Any]:
+        """تابع اصلی اسکن"""
+        results = {  # دیکشنری برای ذخیره نتایج اسکن
                 'url': self.base_url,  # URL هدف
                 'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),  # زمان اسکن
                 'vulnerabilities': defaultdict(list),  # آسیب پذیری های پیدا شده
                 'security_analysis': {}  # تحلیل های امنیتی
-            }
+        }
 
-            try:
+        try:
                 print(f"{Fore.YELLOW}[*] Starting comprehensive scan of {self.base_url}{Style.RESET_ALL}")
 
                 # درخواست اولیه
@@ -371,7 +368,7 @@ class VulnerabilityScanner:
 
                 return results  # بازگرداندن نتایج اسکن
 
-            except Exception as e:  # مدیریت خطا در صورت بروز مشکل در اسکن
+        except Exception as e:  # مدیریت خطا در صورت بروز مشکل در اسکن
                 print(f"{Fore.RED}[!] Error during scan: {e}{Style.RESET_ALL}")
                 results['error'] = str(e)  # ذخیره پیام خطا
                 return results  # بازگرداندن نتایج
